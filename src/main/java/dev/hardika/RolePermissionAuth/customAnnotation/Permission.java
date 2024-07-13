@@ -9,7 +9,9 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@Constraint(validatedBy = {PermissionValidation.class})
+//@Constraint(validatedBy = {PermissionValidation.class})
 public @interface Permission {
-    String value() default "you don't have permission";
+    PermissionEnum[] permissions() default {PermissionEnum.READ};
+    LogicEnum type() default LogicEnum.ALL;
+
 }
