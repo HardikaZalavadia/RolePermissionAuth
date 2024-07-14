@@ -60,7 +60,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
 
 
                 boolean hasPermission;
-                if (logicType == LogicEnum.ALL) {
+                if (logicType == LogicEnum.All) {
                     hasPermission = List.of(requiredPermissions).stream()
                             .map(Enum::name)
                             .allMatch(userPermissions::contains);

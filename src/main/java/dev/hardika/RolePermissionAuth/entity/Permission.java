@@ -1,18 +1,20 @@
 package dev.hardika.RolePermissionAuth.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
-@Entity(name = "Permissions")
+@Entity
 @Getter
 @Setter
-public class Permission extends BaseModel{
-    private String name;
-    @ManyToMany
-    private List<Role> roles;
+@NoArgsConstructor
+@AllArgsConstructor
 
+public class Permission {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
+    private String name;
 }
