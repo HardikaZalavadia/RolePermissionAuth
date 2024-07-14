@@ -3,9 +3,10 @@ package dev.hardika.RolePermissionAuth.repository;
 import dev.hardika.RolePermissionAuth.entity.UserRoleMap;
 import dev.hardika.RolePermissionAuth.entity.UserRoleMapId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-import java.util.UUID;
 
+@Repository
 public interface UserRoleMapRepository extends JpaRepository<UserRoleMap, UserRoleMapId> {
-    UserRoleMap findAllById_UserId(int userId);
+
 }
