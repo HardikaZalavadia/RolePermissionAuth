@@ -5,7 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 @Data
-public class UserRolesMapId implements Serializable {
+public class UserRoleMapId implements Serializable {
     private int uid;
     private int rid;
 }
