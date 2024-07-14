@@ -1,83 +1,56 @@
 package dev.hardika.RolePermissionAuth.interceptor;
 
+
+
 import dev.hardika.RolePermissionAuth.customAnnotation.LogicEnum;
 import dev.hardika.RolePermissionAuth.customAnnotation.Permission;
-import dev.hardika.RolePermissionAuth.customAnnotation.PermissionEnum;
-import dev.hardika.RolePermissionAuth.entity.User;
-import dev.hardika.RolePermissionAuth.entity.UserRoleMap;
-import dev.hardika.RolePermissionAuth.repository.*;
+import dev.hardika.RolePermissionAuth.service.PermissionService;
+import dev.hardika.RolePermissionAuth.service.UserService;
+import dev.hardika.RolePermissionAuth.utils.JWTUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class PermissionInterceptor implements HandlerInterceptor {
-    @Autowired
-    private UserRepository userRepository;
 
     @Autowired
-    private PermissionRepository permissionRepository;
+    private UserService userService;
 
     @Autowired
-    private RoleRepository roleRepository;
+    private PermissionService permissionService;
 
-    @Autowired
-    private PerRoleMapRepository perRoleMapRepository;
-
-    @Autowired
-    private UserRoleMapRepository userRoleMapRepository;
-
-    public boolean preHandle(final HttpServletRequest request, final HttpServletResponse response, final Object handler) throws Exception {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (handler instanceof HandlerMethod) {
             HandlerMethod handlerMethod = (HandlerMethod) handler;
-            Permission permissionAnnotation = handlerMethod.getMethodAnnotation(Permission.class);
+            Method method = handlerMethod.getMethod();
+            if (method.isAnnotationPresent(Permission.class)) {
+                Permission permission = method.getAnnotation(Permission.class);
 
-            if (permissionAnnotation != null) {
-                PermissionEnum[] requiredPermissions = permissionAnnotation.permissions();
-                LogicEnum logicType = permissionAnnotation.type();
-                UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-                String username = userDetails.getUsername();
-                User user = userRepository.findByEmail(username);
-                if(user == null) {
-                    throw new RuntimeException("User not found");
-                }
-                Set<String> userPermissions = userRoleMapRepository.findAllById_UserId(user.getId()).stream()
-                        .map(UserRoleMap::getId)
-                        .map(UserRoleMap.UserRoleId::getRoleId)
-                        .flatMap(roleId -> perRoleMapRepository.findAllById_RoleId(roleId).stream())
-                        .filter(perRoleMap -> perRoleMap.getStatus())
-                        .map(perRoleMap -> permissionRepository.findById(perRoleMap.getId().getPid()).orElseThrow(() -> new RuntimeException("Permission not found")).getName())
-                        .collect(Collectors.toSet());
+                String token = request.getHeader("Authorization");
+                String username = JWTUtils.getUsernameFromToken(token); // Implement this utility to decode JWT tokens
+                List<String> userRoles = userService.getUserRoles(username);
+                List<String> userPermissions = permissionService.getUserPermissions(userRoles);
 
+                boolean accessGranted = permission.type() == LogicEnum.All
+                        ? Stream.of(permission.permissions()).allMatch(p -> userPermissions.contains(p.name()))
+                        : Stream.of(permission.permissions()).anyMatch(p -> userPermissions.contains(p.name()));
 
-                boolean hasPermission;
-                if (logicType == LogicEnum.All) {
-                    hasPermission = List.of(requiredPermissions).stream()
-                            .map(Enum::name)
-                            .allMatch(userPermissions::contains);
-                } else {
-                    hasPermission = List.of(requiredPermissions).stream()
-                            .map(Enum::name)
-                            .anyMatch(userPermissions::contains);
-                }
-
-                if (!hasPermission) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You don't have the required permissions to access this resource");
+                if (!accessGranted) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden");
                     return false;
                 }
             }
         }
-
         return true;
     }
-
 }
+
